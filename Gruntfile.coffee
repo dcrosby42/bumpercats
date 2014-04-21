@@ -54,6 +54,12 @@ module.exports = (grunt) ->
           failOnError: true
           stdout: true
 
+      sneak_sim_sim:
+        command: "cd ../sim-sim-js && grunt build && cd ../bumpercats && rm -rf node_modules/sim-sim-js && cp -r ../sim-sim-js/build ./node_modules/sim-sim-js"
+        options:
+          failOnError: true
+          stdout: true
+
   grunt.loadNpmTasks 'grunt-contrib-coffee'
   grunt.loadNpmTasks 'grunt-contrib-watch'
   grunt.loadNpmTasks 'grunt-jasmine-node'
@@ -66,3 +72,4 @@ module.exports = (grunt) ->
   grunt.registerTask 'wtest', 'shell:jasmine_watch'
 
   grunt.registerTask 'bundle', ['shell:browserify_app']
+  grunt.registerTask 'simsim', ['shell:sneak_sim_sim']
