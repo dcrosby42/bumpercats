@@ -23,6 +23,7 @@ window.local =
   keyboardController: null
   stats: null
   vars: {}
+  messageLogger: null
 
 imageAssets = [
   # "images/ball.png",
@@ -240,10 +241,20 @@ setupStopWatch = ->
   window.local.stopWatch = stopWatch
 
 setupSimulation = ->
-  url = "http://#{location.hostname}:#{location.port}"
-  simulation = SimSim.create.socketIOSimulation(
-    socketIO: io.connect(url)
+  simulation = SimSim.createSimulation(
+    adapter:
+      type: 'socket_io'
+      options:
+        url: "http://#{location.hostname}:#{location.port}"
     world: new TheWorld()
+    # spyOnDataIn: (simulation, data) ->
+    #   step = "?"
+    #   step = simulation.simState.step if simulation.simState
+    #   console.log ">> turn: #{simulation.currentTurnNumber} step: #{simulation.simState.step} data:", data
+    # spyOnDataOut: (simulation, data) ->
+    #   step = "?"
+    #   step = simulation.simState.step if simulation.simState
+    #   console.log ">> turn: #{simulation.currentTurnNumber} step: #{simulation.simState.step} data:", data
   )
   window.local.simulation = simulation
 

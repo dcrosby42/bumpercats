@@ -30,7 +30,8 @@ window.local = {
   },
   keyboardController: null,
   stats: null,
-  vars: {}
+  vars: {},
+  messageLogger: null
 };
 
 imageAssets = ["images/bumpercat_red.png"];
@@ -302,10 +303,14 @@ setupStopWatch = function() {
 };
 
 setupSimulation = function() {
-  var simulation, url;
-  url = "http://" + location.hostname + ":" + location.port;
-  simulation = SimSim.create.socketIOSimulation({
-    socketIO: io.connect(url),
+  var simulation;
+  simulation = SimSim.createSimulation({
+    adapter: {
+      type: 'socket_io',
+      options: {
+        url: "http://" + location.hostname + ":" + location.port
+      }
+    },
     world: new TheWorld()
   });
   return window.local.simulation = simulation;
