@@ -1,5 +1,5 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-var BumperCatsWorld, GameFramework, KeyboardController, PixiWrapper, StopWatch, buildKeyboardController, buildPixiWrapper, buildSimulation, buildStopWatch, setupStats;
+var BumperCatsWorld, GameRunner, KeyboardController, PixiWrapper, StopWatch, buildKeyboardController, buildPixiWrapper, buildSimulation, buildStopWatch, setupStats, _copyData;
 
 StopWatch = require('./stop_watch.coffee');
 
@@ -33,14 +33,17 @@ window.onload = function() {
   });
   pixiWrapper.appendViewTo(document.body);
   return pixiWrapper.loadAssets(function() {
-    var gameFramework, keyboardController, simulation, stopWatch;
+    var gameRunner, keyboardController, simulation, stopWatch, world;
+    world = new BumperCatsWorld({
+      pixiWrapper: pixiWrapper
+    });
     simulation = buildSimulation({
       url: window.gameConfig.url,
-      pixiWrapper: pixiWrapper
+      world: world
     });
     keyboardController = buildKeyboardController();
     stopWatch = buildStopWatch();
-    gameFramework = new GameFramework({
+    gameRunner = new GameRunner({
       window: window,
       simulation: simulation,
       pixiWrapper: pixiWrapper,
@@ -48,12 +51,8 @@ window.onload = function() {
       stats: stats,
       stopWatch: stopWatch
     });
-    window.local.stats = stats;
-    window.local.pixiWrapper = pixiWrapper;
-    window.local.simulation = simulation;
-    window.local.stopWatch = stopWatch;
-    window.local.gameFramework = gameFramework;
-    return gameFramework.start();
+    window.local.gameRunner = gameRunner;
+    return gameRunner.start();
   });
 };
 
@@ -76,9 +75,7 @@ buildSimulation = function(opts) {
         url: opts.url
       }
     },
-    world: new BumperCatsWorld({
-      pixiWrapper: opts.pixiWrapper
-    })
+    world: opts.world
   });
 };
 
@@ -136,52 +133,54 @@ buildKeyboardController = function() {
   });
 };
 
-GameFramework = (function() {
-  function GameFramework(_arg) {
+GameRunner = (function() {
+  function GameRunner(_arg) {
     this.window = _arg.window, this.simulation = _arg.simulation, this.pixiWrapper = _arg.pixiWrapper, this.stats = _arg.stats, this.stopWatch = _arg.stopWatch, this.keyboardController = _arg.keyboardController;
     this.shouldRun = false;
   }
 
-  GameFramework.prototype.start = function() {
+  GameRunner.prototype.start = function() {
+    this.simulation.start();
     this.shouldRun = true;
     return this.update();
   };
 
-  GameFramework.prototype.update = function() {
-    var action, value, _ref;
-    this.window.requestAnimationFrame((function(_this) {
-      return function() {
-        return _this.update();
-      };
-    })(this));
-    _ref = this.keyboardController.update();
-    for (action in _ref) {
-      value = _ref[action];
-      this.simulation.worldProxy("updateControl", action, value);
-    }
-    this.simulation.update(this.stopWatch.elapsedSeconds());
-    this.pixiWrapper.render();
-    return this.stats.update();
+  GameRunner.prototype.stop = function() {
+    this.shouldRun = false;
+    return this.simulation.stop();
   };
 
-  return GameFramework;
+  GameRunner.prototype.update = function() {
+    var action, value, _ref;
+    if (this.shouldRun) {
+      this.window.requestAnimationFrame((function(_this) {
+        return function() {
+          return _this.update();
+        };
+      })(this));
+      _ref = this.keyboardController.update();
+      for (action in _ref) {
+        value = _ref[action];
+        this.simulation.worldProxy("updateControl", action, value);
+      }
+      this.simulation.update(this.stopWatch.elapsedSeconds());
+      this.pixiWrapper.render();
+      return this.stats.update();
+    }
+  };
+
+  return GameRunner;
 
 })();
 
-window.dropEvents = function() {
-  console.log("Drop events");
-  return window.local.vars.dropEvents = true;
-};
-
-window.stopDroppingEvents = function() {
-  console.log("Stop dropping events");
-  return window.local.vars.dropEvents = false;
+_copyData = function(data) {
+  return JSON.parse(JSON.stringify(data));
 };
 
 window.takeSnapshot = function() {
   var d, ss;
-  d = window.local.simulation.world.getData();
-  ss = JSON.parse(JSON.stringify(d));
+  d = window.local.gameRunner.simulation.world.getData();
+  ss = _copyData(d);
   console.log(ss);
   return window.local.vars.snapshot = ss;
 };
@@ -190,7 +189,15 @@ window.restoreSnapshot = function() {
   var ss;
   ss = window.local.vars.snapshot;
   console.log(ss);
-  return window.local.simulation.world.setData(ss);
+  return window.local.gameRunner.simulation.world.setData(_copyData(ss));
+};
+
+window.stop = function() {
+  return window.local.gameRunner.stop();
+};
+
+window.start = function() {
+  return window.local.gameRunner.start();
 };
 
 
@@ -270,6 +277,11 @@ BumperCatsWorld = (function(_super) {
     return console.log("Player " + id + " LEFT, @data is now", this.data);
   };
 
+  BumperCatsWorld.prototype.theEnd = function() {
+    this.resetData();
+    return console.log("THE END");
+  };
+
   BumperCatsWorld.prototype.step = function(dt) {
     this.syncDataToGameObjects();
     this.applyControls();
@@ -279,11 +291,15 @@ BumperCatsWorld = (function(_super) {
   };
 
   BumperCatsWorld.prototype.setData = function(data) {
-    this.data = this.defaultData();
-    this.syncNeeded = true;
-    this.syncDataToGameObjects();
+    this.resetData();
     this.data = data;
     return this.syncNeeded = true;
+  };
+
+  BumperCatsWorld.prototype.resetData = function() {
+    this.data = this.defaultData();
+    this.syncNeeded = true;
+    return this.syncDataToGameObjects();
   };
 
   BumperCatsWorld.prototype.getData = function() {

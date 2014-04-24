@@ -45,6 +45,10 @@ class BumperCatsWorld extends SimSim.WorldBase
     @syncNeeded = true
     console.log "Player #{id} LEFT, @data is now", @data
     
+  theEnd: ->
+    @resetData()
+    console.log "THE END"
+
   step: (dt) ->
     @syncDataToGameObjects()
     @applyControls()
@@ -56,12 +60,14 @@ class BumperCatsWorld extends SimSim.WorldBase
     @moveSprites()
   
   setData: (data) ->
-    @data = @defaultData()
-    @syncNeeded = true
-    @syncDataToGameObjects()
+    @resetData()
     @data = data
     @syncNeeded = true
     
+  resetData: ->
+    @data = @defaultData()
+    @syncNeeded = true
+    @syncDataToGameObjects()
 
   getData: ->
     @captureGameObjectsAsData()
@@ -126,6 +132,7 @@ class BumperCatsWorld extends SimSim.WorldBase
         try
           # A box exists in @data that is NOT represented in game objects
           obj = {}
+
           obj.body = @makeBoxBody(boxData)
           obj.sprite = @makeBoxSprite(boxData)
           @pixiWrapper.stage.addChild obj.sprite

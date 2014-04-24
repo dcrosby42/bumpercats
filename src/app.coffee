@@ -34,10 +34,14 @@ window.onload = ->
   pixiWrapper.appendViewTo(document.body)
 
   pixiWrapper.loadAssets ->
-    simulation = buildSimulation(url: window.gameConfig.url, pixiWrapper:pixiWrapper)
+    world = new BumperCatsWorld(
+      pixiWrapper:pixiWrapper
+    )
+
+    simulation = buildSimulation(url: window.gameConfig.url, world: world)
     keyboardController = buildKeyboardController()
     stopWatch = buildStopWatch()
-    gameFramework = new GameFramework(
+    gameRunner = new GameRunner(
       window: window
       simulation: simulation
       pixiWrapper: pixiWrapper
@@ -46,13 +50,9 @@ window.onload = ->
       stopWatch: stopWatch
     )
 
-    window.local.stats       = stats
-    window.local.pixiWrapper = pixiWrapper
-    window.local.simulation  = simulation
-    window.local.stopWatch   = stopWatch
-    window.local.gameFramework = gameFramework
+    window.local.gameRunner = gameRunner
 
-    gameFramework.start()
+    gameRunner.start()
 
 buildStopWatch = ->
   stopWatch = new StopWatch()
@@ -65,9 +65,7 @@ buildSimulation = (opts={})->
       type: 'socket_io'
       options:
         url: opts.url
-    world: new BumperCatsWorld(
-      pixiWrapper: opts.pixiWrapper
-    )
+    world: opts.world
     # spyOnDataIn: (simulation, data) ->
     #   step = "?"
     #   step = simulation.simState.step if simulation.simState
@@ -117,39 +115,54 @@ buildKeyboardController = ->
     back: "back"
   )
 
-class GameFramework
+class GameRunner
   constructor: ({@window,@simulation,@pixiWrapper,@stats,@stopWatch,@keyboardController}) ->
     @shouldRun = false
 
   start: ->
+    @simulation.start()
     @shouldRun = true
     @update()
 
+  stop: ->
+    @shouldRun = false
+    @simulation.stop()
+
   update: ->
-    @window.requestAnimationFrame => @update()
-    for action,value of @keyboardController.update()
-      @simulation.worldProxy "updateControl", action, value
-    @simulation.update(@stopWatch.elapsedSeconds())
-    @pixiWrapper.render()
-    @stats.update()
+    if @shouldRun
+      @window.requestAnimationFrame => @update()
+      for action,value of @keyboardController.update()
+        @simulation.worldProxy "updateControl", action, value
+      @simulation.update(@stopWatch.elapsedSeconds())
+      @pixiWrapper.render()
+      @stats.update()
 
 
 
-window.dropEvents = ->
-  console.log "Drop events"
-  window.local.vars.dropEvents = true
+# window.dropEvents = ->
+#   console.log "Drop events"
+#   window.local.vars.dropEvents = true
+# 
+# window.stopDroppingEvents = ->
+#   console.log "Stop dropping events"
+#   window.local.vars.dropEvents = false
 
-window.stopDroppingEvents = ->
-  console.log "Stop dropping events"
-  window.local.vars.dropEvents = false
+_copyData = (data) ->
+  JSON.parse(JSON.stringify(data))
 
 window.takeSnapshot = ->
-  d = window.local.simulation.world.getData()
-  ss = JSON.parse(JSON.stringify(d))
+  d = window.local.gameRunner.simulation.world.getData()
+  ss = _copyData(d)
   console.log ss
   window.local.vars.snapshot = ss
 
 window.restoreSnapshot = ->
   ss = window.local.vars.snapshot
   console.log ss
-  window.local.simulation.world.setData ss
+  window.local.gameRunner.simulation.world.setData _copyData(ss)
+
+window.stop = ->
+  window.local.gameRunner.stop()
+
+window.start = ->
+  window.local.gameRunner.start()
