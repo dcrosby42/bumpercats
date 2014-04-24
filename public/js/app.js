@@ -1,11 +1,15 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 var BumperCatsWorld, GameRunner, KeyboardController, PixiWrapper, StopWatch, buildKeyboardController, buildPixiWrapper, buildSimulation, buildStopWatch, setupStats, _copyData;
 
+BumperCatsWorld = require('./bumper_cats_world.coffee');
+
 StopWatch = require('./stop_watch.coffee');
 
 KeyboardController = require('./keyboard_controller.coffee');
 
-BumperCatsWorld = require('./bumper_cats_world.coffee');
+PixiWrapper = require('./pixi_wrapper.coffee');
+
+GameRunner = require('./game_runner.coffee');
 
 window.gameConfig = {
   stageWidth: 800,
@@ -15,12 +19,8 @@ window.gameConfig = {
 };
 
 window.local = {
-  simulation: null,
-  stopWatch: null,
-  keyboardController: null,
-  stats: null,
   vars: {},
-  pixiWrapper: null
+  gameRunner: null
 };
 
 window.onload = function() {
@@ -89,30 +89,6 @@ setupStats = function() {
   return stats;
 };
 
-PixiWrapper = (function() {
-  function PixiWrapper(opts) {
-    this.stage = new PIXI.Stage(0xDDDDDD, true);
-    this.renderer = PIXI.autoDetectRenderer(opts.width, opts.height, void 0, false);
-    this.loader = new PIXI.AssetLoader(opts.assets);
-  }
-
-  PixiWrapper.prototype.appendViewTo = function(el) {
-    return el.appendChild(this.renderer.view);
-  };
-
-  PixiWrapper.prototype.loadAssets = function(callback) {
-    this.loader.onComplete = callback;
-    return this.loader.load();
-  };
-
-  PixiWrapper.prototype.render = function() {
-    return this.renderer.render(this.stage);
-  };
-
-  return PixiWrapper;
-
-})();
-
 buildPixiWrapper = function(opts) {
   if (opts == null) {
     opts = {};
@@ -132,46 +108,6 @@ buildKeyboardController = function() {
     back: "back"
   });
 };
-
-GameRunner = (function() {
-  function GameRunner(_arg) {
-    this.window = _arg.window, this.simulation = _arg.simulation, this.pixiWrapper = _arg.pixiWrapper, this.stats = _arg.stats, this.stopWatch = _arg.stopWatch, this.keyboardController = _arg.keyboardController;
-    this.shouldRun = false;
-  }
-
-  GameRunner.prototype.start = function() {
-    this.simulation.start();
-    this.shouldRun = true;
-    return this.update();
-  };
-
-  GameRunner.prototype.stop = function() {
-    this.shouldRun = false;
-    return this.simulation.stop();
-  };
-
-  GameRunner.prototype.update = function() {
-    var action, value, _ref;
-    if (this.shouldRun) {
-      this.window.requestAnimationFrame((function(_this) {
-        return function() {
-          return _this.update();
-        };
-      })(this));
-      _ref = this.keyboardController.update();
-      for (action in _ref) {
-        value = _ref[action];
-        this.simulation.worldProxy("updateControl", action, value);
-      }
-      this.simulation.update(this.stopWatch.elapsedSeconds());
-      this.pixiWrapper.render();
-      return this.stats.update();
-    }
-  };
-
-  return GameRunner;
-
-})();
 
 _copyData = function(data) {
   return JSON.parse(JSON.stringify(data));
@@ -201,7 +137,7 @@ window.start = function() {
 };
 
 
-},{"./bumper_cats_world.coffee":2,"./keyboard_controller.coffee":4,"./stop_watch.coffee":5}],2:[function(require,module,exports){
+},{"./bumper_cats_world.coffee":2,"./game_runner.coffee":4,"./keyboard_controller.coffee":5,"./pixi_wrapper.coffee":6,"./stop_watch.coffee":7}],2:[function(require,module,exports){
 var BumperCatsWorld, ChecksumCalculator, HalfPI, fixFloat, vec2,
   __hasProp = {}.hasOwnProperty,
   __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -508,6 +444,52 @@ module.exports = ChecksumCalculator;
 
 
 },{}],4:[function(require,module,exports){
+var GameRunner;
+
+GameRunner = (function() {
+  function GameRunner(_arg) {
+    this.window = _arg.window, this.simulation = _arg.simulation, this.pixiWrapper = _arg.pixiWrapper, this.stats = _arg.stats, this.stopWatch = _arg.stopWatch, this.keyboardController = _arg.keyboardController;
+    this.shouldRun = false;
+  }
+
+  GameRunner.prototype.start = function() {
+    this.simulation.start();
+    this.shouldRun = true;
+    return this.update();
+  };
+
+  GameRunner.prototype.stop = function() {
+    this.shouldRun = false;
+    return this.simulation.stop();
+  };
+
+  GameRunner.prototype.update = function() {
+    var action, value, _ref;
+    if (this.shouldRun) {
+      this.window.requestAnimationFrame((function(_this) {
+        return function() {
+          return _this.update();
+        };
+      })(this));
+      _ref = this.keyboardController.update();
+      for (action in _ref) {
+        value = _ref[action];
+        this.simulation.worldProxy("updateControl", action, value);
+      }
+      this.simulation.update(this.stopWatch.elapsedSeconds());
+      this.pixiWrapper.render();
+      return this.stats.update();
+    }
+  };
+
+  return GameRunner;
+
+})();
+
+module.exports = GameRunner;
+
+
+},{}],5:[function(require,module,exports){
 var InputState, KeyboardController, KeyboardWrapper;
 
 KeyboardWrapper = (function() {
@@ -628,7 +610,37 @@ KeyboardController = (function() {
 module.exports = KeyboardController;
 
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
+var PixiWrapper;
+
+PixiWrapper = (function() {
+  function PixiWrapper(opts) {
+    this.stage = new PIXI.Stage(0xDDDDDD, true);
+    this.renderer = PIXI.autoDetectRenderer(opts.width, opts.height, void 0, false);
+    this.loader = new PIXI.AssetLoader(opts.assets);
+  }
+
+  PixiWrapper.prototype.appendViewTo = function(el) {
+    return el.appendChild(this.renderer.view);
+  };
+
+  PixiWrapper.prototype.loadAssets = function(callback) {
+    this.loader.onComplete = callback;
+    return this.loader.load();
+  };
+
+  PixiWrapper.prototype.render = function() {
+    return this.renderer.render(this.stage);
+  };
+
+  return PixiWrapper;
+
+})();
+
+module.exports = PixiWrapper;
+
+
+},{}],7:[function(require,module,exports){
 var StopWatch;
 
 StopWatch = (function() {

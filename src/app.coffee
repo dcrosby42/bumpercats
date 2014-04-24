@@ -1,8 +1,10 @@
 
+BumperCatsWorld = require './bumper_cats_world.coffee'
+
 StopWatch = require './stop_watch.coffee'
 KeyboardController = require './keyboard_controller.coffee'
-BumperCatsWorld = require './bumper_cats_world.coffee'
-        
+PixiWrapper = require './pixi_wrapper.coffee'
+GameRunner = require './game_runner.coffee'
 
 window.gameConfig =
   stageWidth: 800
@@ -15,12 +17,8 @@ window.gameConfig =
   url: "http://#{window.location.hostname}:#{window.location.port}"
 
 window.local =
-  simulation: null
-  stopWatch: null
-  keyboardController: null
-  stats: null
   vars: {}
-  pixiWrapper: null
+  gameRunner: null
 
 window.onload = ->
   stats = setupStats()
@@ -84,22 +82,6 @@ setupStats = ->
   stats.domElement.style.position = "absolute"
   stats
   
-class PixiWrapper
-  constructor: (opts) ->
-    @stage = new PIXI.Stage(0xDDDDDD, true)
-    @renderer = PIXI.autoDetectRenderer(opts.width, opts.height, undefined, false)
-    @loader = new PIXI.AssetLoader(opts.assets)
-
-  appendViewTo: (el) ->
-    el.appendChild(@renderer.view)
-
-  loadAssets: (callback) ->
-    @loader.onComplete = callback
-    @loader.load()
-
-  render: ->
-    @renderer.render(@stage)
-
 buildPixiWrapper = (opts={})->
   new PixiWrapper(opts)
 
@@ -115,37 +97,7 @@ buildKeyboardController = ->
     back: "back"
   )
 
-class GameRunner
-  constructor: ({@window,@simulation,@pixiWrapper,@stats,@stopWatch,@keyboardController}) ->
-    @shouldRun = false
 
-  start: ->
-    @simulation.start()
-    @shouldRun = true
-    @update()
-
-  stop: ->
-    @shouldRun = false
-    @simulation.stop()
-
-  update: ->
-    if @shouldRun
-      @window.requestAnimationFrame => @update()
-      for action,value of @keyboardController.update()
-        @simulation.worldProxy "updateControl", action, value
-      @simulation.update(@stopWatch.elapsedSeconds())
-      @pixiWrapper.render()
-      @stats.update()
-
-
-
-# window.dropEvents = ->
-#   console.log "Drop events"
-#   window.local.vars.dropEvents = true
-# 
-# window.stopDroppingEvents = ->
-#   console.log "Stop dropping events"
-#   window.local.vars.dropEvents = false
 
 _copyData = (data) ->
   JSON.parse(JSON.stringify(data))
